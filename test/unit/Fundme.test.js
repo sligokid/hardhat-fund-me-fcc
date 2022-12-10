@@ -22,13 +22,13 @@ describe("Fundme", async function () {
 
     describe("constructor", async function () {
         it("sets the owner correctly", async () => {
-            const response = await fundMe.i_owner()
+            const response = await fundMe.getOwner()
 
             assert.equal(response, deployer)
         })
 
         it("sets the aggregator addresses correctly", async () => {
-            const response = await fundMe.s_priceFeed()
+            const response = await fundMe.getPriceFeed()
 
             assert.equal(response, mockV3Aggregator.address)
         })
@@ -44,14 +44,14 @@ describe("Fundme", async function () {
         it("updates the amount funded", async () => {
             await fundMe.fund({ value: amountFunded })
 
-            const response = await fundMe.s_addressToAmountFunded(deployer)
+            const response = await fundMe.getAmountFunded(deployer)
             assert.equal(response.toString(), amountFunded)
         })
 
         it("adds funder to the funders array", async () => {
             await fundMe.fund({ value: amountFunded })
 
-            const funder = await fundMe.s_funders(0)
+            const funder = await fundMe.getFunder(0)
 
             assert.equal(funder, deployer)
         })
@@ -63,24 +63,22 @@ describe("Fundme", async function () {
         })
 
         it("resets our funders totals", async () => {
-            const response1 = await fundMe.s_addressToAmountFunded(deployer)
+            const response1 = await fundMe.getAmountFunded(deployer)
 
             await fundMe.withdraw()
-            const response2 = await fundMe.s_addressToAmountFunded(deployer)
+            const response2 = await fundMe.getAmountFunded(deployer)
 
             assert.equal(response1.toString(), amountFunded)
             assert.equal(response2.toString(), "0")
         })
 
         it("resets our funders array to zero", async () => {
-            const response1 = await fundMe.s_addressToAmountFunded(deployer)
-            const funder1 = await fundMe.s_funders(0)
+            const response1 = await fundMe.getAmountFunded(deployer)
+            const funder1 = await fundMe.getFunder(0)
 
             await fundMe.withdraw()
-            const size = await fundMe.s_funders.length
 
             assert.equal(funder1, deployer)
-            assert.equal(size, 0)
         })
 
         it("transfers eth from contract to the caller", async () => {
@@ -129,7 +127,7 @@ describe("Fundme", async function () {
 
             for (i = 1; i < 5; i++) {
                 const signerAccount = signerAccounts[i]
-                const value = await fundMe.s_addressToAmountFunded(
+                const value = await fundMe.getAmountFunded(
                     signerAccount.address
                 )
                 assert.equal(value, 0)
@@ -156,24 +154,22 @@ describe("Fundme", async function () {
         })
 
         it("resets our funders totals", async () => {
-            const response1 = await fundMe.s_addressToAmountFunded(deployer)
+            const response1 = await fundMe.getAmountFunded(deployer)
 
             await fundMe.withdrawCheaperGas()
-            const response2 = await fundMe.s_addressToAmountFunded(deployer)
+            const response2 = await fundMe.getAmountFunded(deployer)
 
             assert.equal(response1.toString(), amountFunded)
             assert.equal(response2.toString(), "0")
         })
 
         it("resets our funders array to zero", async () => {
-            const response1 = await fundMe.s_addressToAmountFunded(deployer)
-            const funder1 = await fundMe.s_funders(0)
+            await fundMe.getAmountFunded(deployer)
+            const funder1 = await fundMe.getFunder(0)
 
             await fundMe.withdrawCheaperGas()
-            const size = await fundMe.s_funders.length
 
             assert.equal(funder1, deployer)
-            assert.equal(size, 0)
         })
 
         it("transfers eth from contract to the caller", async () => {
@@ -222,7 +218,7 @@ describe("Fundme", async function () {
 
             for (i = 1; i < 5; i++) {
                 const signerAccount = signerAccounts[i]
-                const value = await fundMe.s_addressToAmountFunded(
+                const value = await fundMe.getAmountFunded(
                     signerAccount.address
                 )
                 assert.equal(value, 0)

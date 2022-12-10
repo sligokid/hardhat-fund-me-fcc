@@ -1,41 +1,39 @@
 {
-  "language": "Solidity",
-  "sources": {
-    "contracts/FundMe.sol": {
-      "content": "// Get funds from users\n// Withdraw funds as owner of contract\n// Set the minimum funding value in USD\n\n// SPDX-License-Identifier: MIT\npragma solidity ^0.8.0;\n\n// my pricing libary\nimport \"./PriceConverter.sol\";\n\n// const, immutable - if you have a value outside of a function once and never changes, const much cheaper to use\n\n// cost: 809,984\n// cost: 790,394\n\nerror NotOwner();\n\ncontract FundMe {\n    // attach my pricing library to the type\n    using PriceConverter for uint256;\n\n    // layer 2 source for pricing\n    // const (21,415 gas) * 13000000000 = 278395000000000 =     0.000278395 eth = .33 USD\n    // non-const (23,515 gas) * 13000000000 = 305695000000000 = 0.000305695000000000 =\n    // call = 21,415 * 13000000000 = 278395000000000 = 0.000278395 eth = .33 USD\n    mapping(address => uint256) public addressToAmountFunded;\n    address[] public funders;\n    address public immutable owner;\n    uint256 public constant MINIMUM_USD = 50 * 10 ** 18; // Gwei\n\n    AggregatorV3Interface public priceFeed;\n\n    // gets called in the same tx as contract creation\n    constructor(address priceFeedAddress) {\n        owner = msg.sender;\n        priceFeed = AggregatorV3Interface(priceFeedAddress);\n    }\n\n    // payable turns the function red, this contract can receive wei from sender to store in its wallet\n    function fund() public payable {\n        // set the minimum fund amount to 1 ETH (1 * 10 ** 18) gwei, revert will rollback and send remaining gas back to sender\n        require(\n            msg.value.getConversionRate(priceFeed) >= MINIMUM_USD,\n            \"Mininum value is not met..\"\n        );\n        funders.push(msg.sender);\n        addressToAmountFunded[msg.sender] += msg.value;\n    }\n\n    function withdraw() public onlyOwner {\n        // orange button b/c not payable\n        // reset our funders totals\n        for (uint256 i = 0; i < funders.length; i++) {\n            address funder = funders[i];\n            addressToAmountFunded[funder] = 0;\n        }\n        // reset the array with zero elements\n        funders = new address[](0);\n\n        // There are 3 ways to send ETH / native tokens (we need to cast the senders addreess to payable address type)\n        // see https://solidity-by-example.org/sending-ether/\n        // 1. transfer will revert on fail, 2300 gas cap\n        //payable(msg.sender).transfer(address(this).balance);\n\n        // 2. send will return bool on fail, so we need to add a require to revert on fail, 2300 gas cap\n        //bool sendSuccess = payable(msg.sender).send(address(this).balance);\n        //require(sendSuccess, \"Send failed\");\n\n        // 3. Recommended - call (a lower level command, can call any function in ethereum without ABI) returns 2 vars, no gas capp\n        // since bytes objects are arrays dataReturned needs to be in memory - but we dont need it so leave empty\n        // (bool callSuccess, bytes memory dataReturned) = ..\n        (bool callSuccess, ) = payable(msg.sender).call{\n            value: address(this).balance\n        }(\"\");\n        require(callSuccess, \"Call failed\");\n    }\n\n    modifier onlyOwner() {\n        //require(msg.sender == i_owner, \"Sender is not the owner\");\n        if (msg.sender != owner) {\n            revert NotOwner();\n        }\n        _; // now execute the rest of the code\n    }\n\n    // if msg.data is empty call this\n    receive() external payable {\n        fund();\n    }\n\n    // if msg.data is empty and no recieve() / function missing call this\n    fallback() external payable {\n        fund();\n    }\n}\n"
+    "language": "Solidity",
+    "sources": {
+        "contracts/FundMe.sol": {
+            "content": "// Get funds from users\n// Withdraw funds as owner of contract\n// Set the minimum funding value in USD\n\n// SPDX-License-Identifier: MIT\npragma solidity ^0.8.0;\n\n// my pricing libary\nimport \"./PriceConverter.sol\";\n\n// const, immutable - if you have a value outside of a function once and never changes, const much cheaper to use\n\n// cost: 809,984\n// cost: 790,394\n\nerror NotOwner();\n\ncontract FundMe {\n    // attach my pricing library to the type\n    using PriceConverter for uint256;\n\n    // layer 2 source for pricing\n    // const (21,415 gas) * 13000000000 = 278395000000000 =     0.000278395 eth = .33 USD\n    // non-const (23,515 gas) * 13000000000 = 305695000000000 = 0.000305695000000000 =\n    // call = 21,415 * 13000000000 = 278395000000000 = 0.000278395 eth = .33 USD\n    mapping(address => uint256) public addressToAmountFunded;\n    address[] public funders;\n    address public immutable owner;\n    uint256 public constant MINIMUM_USD = 50 * 10 ** 18; // Gwei\n\n    AggregatorV3Interface public priceFeed;\n\n    // gets called in the same tx as contract creation\n    constructor(address priceFeedAddress) {\n        owner = msg.sender;\n        priceFeed = AggregatorV3Interface(priceFeedAddress);\n    }\n\n    // payable turns the function red, this contract can receive wei from sender to store in its wallet\n    function fund() public payable {\n        // set the minimum fund amount to 1 ETH (1 * 10 ** 18) gwei, revert will rollback and send remaining gas back to sender\n        require(\n            msg.value.getConversionRate(priceFeed) >= MINIMUM_USD,\n            \"Mininum value is not met..\"\n        );\n        funders.push(msg.sender);\n        addressToAmountFunded[msg.sender] += msg.value;\n    }\n\n    function withdraw() public onlyOwner {\n        // orange button b/c not payable\n        // reset our funders totals\n        for (uint256 i = 0; i < funders.length; i++) {\n            address funder = funders[i];\n            addressToAmountFunded[funder] = 0;\n        }\n        // reset the array with zero elements\n        funders = new address[](0);\n\n        // There are 3 ways to send ETH / native tokens (we need to cast the senders addreess to payable address type)\n        // see https://solidity-by-example.org/sending-ether/\n        // 1. transfer will revert on fail, 2300 gas cap\n        //payable(msg.sender).transfer(address(this).balance);\n\n        // 2. send will return bool on fail, so we need to add a require to revert on fail, 2300 gas cap\n        //bool sendSuccess = payable(msg.sender).send(address(this).balance);\n        //require(sendSuccess, \"Send failed\");\n\n        // 3. Recommended - call (a lower level command, can call any function in ethereum without ABI) returns 2 vars, no gas capp\n        // since bytes objects are arrays dataReturned needs to be in memory - but we dont need it so leave empty\n        // (bool callSuccess, bytes memory dataReturned) = ..\n        (bool callSuccess, ) = payable(msg.sender).call{\n            value: address(this).balance\n        }(\"\");\n        require(callSuccess, \"Call failed\");\n    }\n\n    modifier onlyOwner() {\n        //require(msg.sender == i_owner, \"Sender is not the owner\");\n        if (msg.sender != owner) {\n            revert NotOwner();\n        }\n        _; // now execute the rest of the code\n    }\n\n    // if msg.data is empty call this\n    receive() external payable {\n        fund();\n    }\n\n    // if msg.data is empty and no recieve() / function missing call this\n    fallback() external payable {\n        fund();\n    }\n}\n"
+        },
+        "contracts/PriceConverter.sol": {
+            "content": "// SPDX-License-Identifier: MIT\n\npragma solidity ^0.8.0;\n\nimport \"@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol\";\n\n// cannot have any state and cannot send ether, and all functions are internal\nlibrary PriceConverter {\n    // convert ETH to USD on testnet using a chainlink oracle source\n    function getPrice(\n        AggregatorV3Interface priceFeed\n    ) internal view returns (uint256) {\n        // ABI and Address of data source contract: 0xD4a33860578De61DBAbDc8BFdb98FD742fA7028e\n        (, int256 price, , , ) = priceFeed.latestRoundData(); // price has 8 decimal places\n        return uint256(price * 1e10); // 1 ** 10 = 10000000000\n    }\n\n    function getVersion() internal view returns (uint256) {\n        AggregatorV3Interface priceFeed = AggregatorV3Interface(\n            0xD4a33860578De61DBAbDc8BFdb98FD742fA7028e\n        );\n        return priceFeed.version();\n    }\n\n    // both price and amount are have 18 decimal places, 1st parameter is the object called (msg.value)\n    function getConversionRate(\n        uint256 _ethAmount,\n        AggregatorV3Interface priceFeed\n    ) internal view returns (uint256) {\n        uint256 ethPrice = getPrice(priceFeed);\n        // eg. 3000_000000000000000000\n        // 1_00000000000000000\n        uint256 ethAmountInUsd = (ethPrice * _ethAmount) / 1e18;\n        return ethAmountInUsd;\n    }\n}\n"
+        },
+        "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol": {
+            "content": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.0;\n\ninterface AggregatorV3Interface {\n  function decimals() external view returns (uint8);\n\n  function description() external view returns (string memory);\n\n  function version() external view returns (uint256);\n\n  function getRoundData(uint80 _roundId)\n    external\n    view\n    returns (\n      uint80 roundId,\n      int256 answer,\n      uint256 startedAt,\n      uint256 updatedAt,\n      uint80 answeredInRound\n    );\n\n  function latestRoundData()\n    external\n    view\n    returns (\n      uint80 roundId,\n      int256 answer,\n      uint256 startedAt,\n      uint256 updatedAt,\n      uint80 answeredInRound\n    );\n}\n"
+        }
     },
-    "contracts/PriceConverter.sol": {
-      "content": "// SPDX-License-Identifier: MIT\n\npragma solidity ^0.8.0;\n\nimport \"@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol\";\n\n// cannot have any state and cannot send ether, and all functions are internal\nlibrary PriceConverter {\n    // convert ETH to USD on testnet using a chainlink oracle source\n    function getPrice(\n        AggregatorV3Interface priceFeed\n    ) internal view returns (uint256) {\n        // ABI and Address of data source contract: 0xD4a33860578De61DBAbDc8BFdb98FD742fA7028e\n        (, int256 price, , , ) = priceFeed.latestRoundData(); // price has 8 decimal places\n        return uint256(price * 1e10); // 1 ** 10 = 10000000000\n    }\n\n    function getVersion() internal view returns (uint256) {\n        AggregatorV3Interface priceFeed = AggregatorV3Interface(\n            0xD4a33860578De61DBAbDc8BFdb98FD742fA7028e\n        );\n        return priceFeed.version();\n    }\n\n    // both price and amount are have 18 decimal places, 1st parameter is the object called (msg.value)\n    function getConversionRate(\n        uint256 _ethAmount,\n        AggregatorV3Interface priceFeed\n    ) internal view returns (uint256) {\n        uint256 ethPrice = getPrice(priceFeed);\n        // eg. 3000_000000000000000000\n        // 1_00000000000000000\n        uint256 ethAmountInUsd = (ethPrice * _ethAmount) / 1e18;\n        return ethAmountInUsd;\n    }\n}\n"
-    },
-    "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol": {
-      "content": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.0;\n\ninterface AggregatorV3Interface {\n  function decimals() external view returns (uint8);\n\n  function description() external view returns (string memory);\n\n  function version() external view returns (uint256);\n\n  function getRoundData(uint80 _roundId)\n    external\n    view\n    returns (\n      uint80 roundId,\n      int256 answer,\n      uint256 startedAt,\n      uint256 updatedAt,\n      uint80 answeredInRound\n    );\n\n  function latestRoundData()\n    external\n    view\n    returns (\n      uint80 roundId,\n      int256 answer,\n      uint256 startedAt,\n      uint256 updatedAt,\n      uint80 answeredInRound\n    );\n}\n"
+    "settings": {
+        "optimizer": {
+            "enabled": false,
+            "runs": 200
+        },
+        "outputSelection": {
+            "*": {
+                "*": [
+                    "abi",
+                    "evm.bytecode",
+                    "evm.deployedBytecode",
+                    "evm.methodIdentifiers",
+                    "metadata",
+                    "devdoc",
+                    "userdoc",
+                    "storageLayout",
+                    "evm.gasEstimates"
+                ],
+                "": ["ast"]
+            }
+        },
+        "metadata": {
+            "useLiteralContent": true
+        }
     }
-  },
-  "settings": {
-    "optimizer": {
-      "enabled": false,
-      "runs": 200
-    },
-    "outputSelection": {
-      "*": {
-        "*": [
-          "abi",
-          "evm.bytecode",
-          "evm.deployedBytecode",
-          "evm.methodIdentifiers",
-          "metadata",
-          "devdoc",
-          "userdoc",
-          "storageLayout",
-          "evm.gasEstimates"
-        ],
-        "": [
-          "ast"
-        ]
-      }
-    },
-    "metadata": {
-      "useLiteralContent": true
-    }
-  }
 }

@@ -28,6 +28,9 @@
     "lint": "yarn solhint contracts/*.sol",
     "lint:fix": "yarn solhint contracts/*.sol --fix",
     "format": "yarn prettier --write .",
-    "coverage": "yarn hardhat coverage"
+    "coverage": "yarn hardhat coverage",
+    "local-node": "yarn hardhat node",
+    "local-node-fund": "yarn hardhat run scripts/fund.js --network localhost",
+    "local-node-withdraw": "yarn hardhat run scripts/withdraw.js --network localhost"
   }
 }
